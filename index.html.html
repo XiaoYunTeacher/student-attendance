@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学生月度出勤签到系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: "Microsoft Yahei", sans-serif;
+        }
+        body {
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 0 20px;
+            background-color: #f5f7fa;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #2c3e50;
+        }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background-color: #e0e6ed;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        .tab-btn.active {
+            background-color: #3498db;
+            color: white;
+        }
+        .page {
+            display: none;
+            background-color: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+        }
+        .page.active {
+            display: block;
+        }
+        .sign-card {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        .sign-info {
+            margin-bottom: 30px;
+            font-size: 18px;
+            color: #34495e;
+        }
+        #signBtn {
+            width: 200px;
+            height: 200px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            touch-action: manipulation;
+        }
+        #signBtn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+        .calendar-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .calendar-header button {
+            padding: 8px 16px;
+            border: none;
+            background-color: #3498db;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 8px;
+        }
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            background-color: #f0f3f7;
+            font-size: 16px;
+        }
+        .calendar-day.other-month {
+            color: #bdc3c7;
+            background-color: #f8f9fa;
+        }
+        .calendar-day.today {
+            border: 2px solid #3498db;
+        }
+        .calendar-day.signed {
+            background-color: #2ecc71;
+            color: white;
+        }
+        .stats-card {
+            margin-top: 25px;
+            padding: 20px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+        }
+        .stats-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 16px;
+        }
+        .student-form {
+            margin-bottom: 25px;
+            display: flex;
+            gap: 10px;
+        }
+        .student-form input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+        .student-form button {
+            padding: 10px 20px;
+            border: none;
+            background-color: #27ae60;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+        th {
+            background-color: #f8f9fa;
+            font-weight: bold;
+        }
+        .export-btn {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #f39c12;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>学生月度出勤签到系统</h1>
+    </div>
+
+    <div class="tabs">
+        <button class="tab-btn active" data-page="student">学生签到</button>
+        <button class="tab-btn" data-page="calendar">月度日历</button>
+        <button class="tab-btn" data-page="admin">后台管理</button>
+    </div>
+
+    <!-- 学生签到页面 -->
+    <div class="page active" id="studentPage">
+        <div class="sign-card">
+            <div class="sign-info">
+                <p>当前日期：<span id="currentDate"></span></p>
+                <p>本月已签到：<span id="signedCount">0</span> 天</p>
+            </div>
+            <button id="signBtn">点击签到</button>
+        </div>
+    </div>
+
+    <!-- 月度日历页面 -->
+    <div class="page" id="calendarPage">
+        <div class="calendar-header">
+            <button id="prevMonth">上月</button>
+            <h2 id="monthTitle"></h2>
+            <button id="nextMonth">下月</button>
+        </div>
+        <div class="calendar-grid" id="calendarGrid"></div>
+        <div class="stats-card">
+            <div class="stats-item">
+                <span>本月总天数</span>
+                <span id="totalDays">0</span>
+            </div>
+            <div class="stats-item">
+                <span>已签到天数</span>
+                <span id="monthSigned">0</span>
+            </div>
+            <div class="stats-item">
+                <span>出勤率</span>
+                <span id="attendanceRate">0%</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 后台管理页面 -->
+    <div class="page" id="adminPage">
+        <h3>学生管理</h3>
+        <div class="student-form">
+            <input type="text" id="stuId" placeholder="输入学号">
+            <input type="text" id="stuName" placeholder="输入姓名">
+            <button id="addStudent">添加学生</button>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>学号</th>
+                    <th>姓名</th>
+                    <th>本月签到次数</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="studentTableBody"></tbody>
+        </table>
+        <button class="export-btn" id="exportCsv">导出本月考勤CSV</button>
+    </div>
+
+    <script>
+        // 工具函数：获取东八区标准日期字符串 YYYY-MM-DD
+        function getTodayString() {
+            const now = new Date();
+            const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+            const beijing = new Date(utc + (8 * 3600000));
+            return beijing.toISOString().split('T')[0];
+        }
+
+        // 全局状态
+        let currentYear = new Date().getFullYear();
+        let currentMonth = new Date().getMonth();
+        const todayStr = getTodayString();
+
+        // 初始化本地存储
+        if (!localStorage.getItem('attendanceData')) {
+            localStorage.setItem('attendanceData', JSON.stringify({}));
+        }
+        if (!localStorage.getItem('studentList')) {
+            localStorage.setItem('studentList', JSON.stringify([]));
+        }
+
+        // 标签页切换逻辑
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+                btn.classList.add('active');
+                document.getElementById(btn.dataset.page + 'Page').classList.add('active');
+                if (btn.dataset.page === 'calendar') renderCalendar();
+                if (btn.dataset.page === 'admin') renderStudentTable();
+            });
+        });
+
+        // 学生签到逻辑
+        function initSignPage() {
+            document.getElementById('currentDate').textContent = todayStr;
+            const monthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+            const attendanceData = JSON.parse(localStorage.getItem('attendanceData'));
+            const monthRecords = attendanceData[monthKey] || [];
+            
+            document.getElementById('signedCount').textContent = monthRecords.length;
+            
+            if (monthRecords.includes(todayStr)) {
+                document.getElementById('signBtn').disabled = true;
+                document.getElementById('signBtn').textContent = '今日已签';
+            }
+
+            document.getElementById('signBtn').addEventListener('click', () => {
+                const attendanceData = JSON.parse(localStorage.getItem('attendanceData'));
+                const monthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+                
+                if (!attendanceData[monthKey]) attendanceData[monthKey] = [];
+                if (!attendanceData[monthKey].includes(todayStr)) {
+                    attendanceData[monthKey].push(todayStr);
+                    localStorage.setItem('attendanceData', JSON.stringify(attendanceData));
+                    alert('✅ 签到成功！');
+                    document.getElementById('signBtn').disabled = true;
+                    document.getElementById('signBtn').textContent = '今日已签';
+                    document.getElementById('signedCount').textContent = attendanceData[monthKey].length;
+                }
+            });
+        }
+
+        // 渲染月度日历
+        function renderCalendar() {
+            const firstDayOfWeek = new Date(currentYear, currentMonth, 1).getDay();
+            const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            const prevMonthLastDay = new Date(currentYear, currentMonth, 0).getDate();
+            const monthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+            const attendanceData = JSON.parse(localStorage.getItem('attendanceData'));
+            const signedDays = attendanceData[monthKey] || [];
+
+            document.getElementById('monthTitle').textContent = `${currentYear}年${currentMonth + 1}月`;
+            document.getElementById('totalDays').textContent = daysInMonth;
+
+            const grid = document.getElementById('calendarGrid');
+            grid.innerHTML = '';
+
+            // 填充上月末尾日期
+            for (let i = firstDayOfWeek - 1; i >= 0; i--) {
+                const day = prevMonthLastDay - i;
+                const cell = document.createElement('div');
+                cell.className = 'calendar-day other-month';
+                cell.textContent = day;
+                grid.appendChild(cell);
+            }
+
+            // 填充当月日期
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const cell = document.createElement('div');
+                cell.className = 'calendar-day';
+                if (dateStr === todayStr) cell.classList.add('today');
+                if (signedDays.includes(dateStr)) cell.classList.add('signed');
+                cell.textContent = day;
+                grid.appendChild(cell);
+            }
+
+            // 填充下月开头日期
+            const remainingCells = 42 - (firstDayOfWeek + daysInMonth);
+            for (let day = 1; day <= remainingCells; day++) {
+                const cell = document.createElement('div');
+                cell.className = 'calendar-day other-month';
+                cell.textContent = day;
+                grid.appendChild(cell);
+            }
+
+            // 更新统计
+            document.getElementById('monthSigned').textContent = signedDays.length;
+            document.getElementById('attendanceRate').textContent = Math.round((signedDays.length / daysInMonth) * 100) + '%';
+        }
+
+        // 月份切换
+        document.getElementById('prevMonth').addEventListener('click', () => {
+            currentMonth--;
+            if (currentMonth < 0) {
+                currentMonth = 11;
+                currentYear--;
+            }
+            renderCalendar();
+        });
+        document.getElementById('nextMonth').addEventListener('click', () => {
+            currentMonth++;
+            if (currentMonth > 11) {
+                currentMonth = 0;
+                currentYear++;
+            }
+            renderCalendar();
+        });
+
+        // 后台学生管理
+        document.getElementById('addStudent').addEventListener('click', () => {
+            const id = document.getElementById('stuId').value.trim();
+            const name = document.getElementById('stuName').value.trim();
+            if (!id || !name) {
+                alert('学号和姓名不能为空');
+                return;
+            }
+            const students = JSON.parse(localStorage.getItem('studentList'));
+            students.push({ id, name });
+            localStorage.setItem('studentList', JSON.stringify(students));
+            document.getElementById('stuId').value = '';
+            document.getElementById('stuName').value = '';
+            renderStudentTable();
+        });
+
+        function renderStudentTable() {
+            const students = JSON.parse(localStorage.getItem('studentList'));
+            const monthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+            const attendanceData = JSON.parse(localStorage.getItem('attendanceData'));
+            const signedDays = attendanceData[monthKey] || [];
+            
+            const tbody = document.getElementById('studentTableBody');
+            tbody.innerHTML = '';
+            students.forEach((stu, index) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${stu.id}</td>
+                    <td>${stu.name}</td>
+                    <td>${signedDays.length}</td>
+                    <td><button onclick="deleteStudent(${index})">删除</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        window.deleteStudent = function(index) {
+            const students = JSON.parse(localStorage.getItem('studentList'));
+            students.splice(index, 1);
+            localStorage.setItem('studentList', JSON.stringify(students));
+            renderStudentTable();
+        }
+
+        // 导出CSV功能
+        document.getElementById('exportCsv').addEventListener('click', () => {
+            const monthKey = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
+            const attendanceData = JSON.parse(localStorage.getItem('attendanceData'));
+            const signedDays = attendanceData[monthKey] || [];
+            const students = JSON.parse(localStorage.getItem('studentList'));
+            
+            let csvContent = "\uFEFF学号,姓名,签到日期\n";
+            students.forEach(stu => {
+                signedDays.forEach(date => {
+                    csvContent += `${stu.id},${stu.name},${date}\n`;
+                });
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${monthKey}月学生考勤记录.csv`;
+            a.click();
+        });
+
+        // 页面初始化
+        initSignPage();
+    </script>
+</body>
+</html>
